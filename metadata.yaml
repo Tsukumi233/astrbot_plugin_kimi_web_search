@@ -1,0 +1,9 @@
+name: astrbot_plugin_kimi_code_search
+display_name: Kimi Code 搜索
+desc: 使用 Kimi Code Plan Search / Fetch 服务进行互联网搜索和网页正文获取，支持指令、LLM Tool 和 Skill。
+version: v0.1.0
+author: Tsukumi233
+repo: https://github.com/Tsukumi233/astrbot_plugin_kimi_code_search
+astrbot_version: ">=4.9.2"
+support_platforms: []
+

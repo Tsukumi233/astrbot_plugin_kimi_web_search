@@ -1,0 +1,103 @@
+{
+  "connection_settings": {
+    "type": "object",
+    "description": "连接设置",
+    "hint": "Kimi Code Search / Fetch 的连接参数",
+    "items": {
+      "api_key": {
+        "type": "string",
+        "description": "Kimi Code API Key",
+        "hint": "Kimi Code Plan 的 API Key。插件不会内置或上传你的密钥。",
+        "default": ""
+      },
+      "search_url": {
+        "type": "string",
+        "description": "Search API 地址",
+        "hint": "默认使用 Kimi Code Search endpoint",
+        "default": "https://api.kimi.com/coding/v1/search"
+      },
+      "fetch_url": {
+        "type": "string",
+        "description": "Fetch API 地址",
+        "hint": "默认使用 Kimi Code Fetch endpoint",
+        "default": "https://api.kimi.com/coding/v1/fetch"
+      },
+      "timeout_seconds": {
+        "type": "int",
+        "description": "请求超时时间（秒）",
+        "default": 30,
+        "slider": {
+          "min": 5,
+          "max": 120,
+          "step": 1
+        }
+      },
+      "reuse_session": {
+        "type": "bool",
+        "description": "复用 HTTP 会话",
+        "hint": "高频调用时可开启，降低连接开销",
+        "default": false
+      },
+      "proxy": {
+        "type": "string",
+        "description": "HTTP 代理",
+        "hint": "例如 http://127.0.0.1:7890，留空则不使用代理",
+        "default": ""
+      }
+    }
+  },
+  "request_settings": {
+    "type": "object",
+    "description": "请求设置",
+    "hint": "控制搜索数量和正文抓取",
+    "items": {
+      "default_limit": {
+        "type": "int",
+        "description": "默认搜索结果数量",
+        "hint": "范围 1-20",
+        "default": 8,
+        "slider": {
+          "min": 1,
+          "max": 20,
+          "step": 1
+        }
+      },
+      "include_content": {
+        "type": "bool",
+        "description": "搜索时抓取页面正文",
+        "hint": "会返回更多内容，也会消耗更多上下文",
+        "default": false
+      },
+      "max_content_chars": {
+        "type": "int",
+        "description": "单次返回正文最大字符数",
+        "default": 4000,
+        "slider": {
+          "min": 500,
+          "max": 12000,
+          "step": 500
+        }
+      }
+    }
+  },
+  "tool_settings": {
+    "type": "object",
+    "description": "工具设置",
+    "hint": "控制 LLM Tool 和 Skill",
+    "items": {
+      "enable_fetch": {
+        "type": "bool",
+        "description": "启用网页抓取工具",
+        "hint": "启用后 AI 可调用 kimi_code_fetch 读取网页正文",
+        "default": true
+      },
+      "enable_skill": {
+        "type": "bool",
+        "description": "安装 Skill",
+        "hint": "启用后将 Skill 安装到 AstrBot skills，同时移除 LLM Tool",
+        "default": false
+      }
+    }
+  }
+}
+
