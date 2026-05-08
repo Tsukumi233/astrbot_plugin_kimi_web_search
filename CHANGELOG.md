@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.5.0
+
+- Remove Chat Completions `$web_search`.
+- Use `/coding/v1/search` for `kimi_web_search`.
+- Keep `/coding/v1/fetch` for `kimi_web_fetch`.
+
 ## v0.4.0
 
 - Change `kimi_web_fetch` to call `/coding/v1/fetch` directly.

@@ -1,6 +1,6 @@
 # Kimi Web Search
 
-Use this skill when you need fresh web search results or page content through Kimi.
+Use this skill when you need fresh web search results or page content through Kimi coding plan.
 
 ## Commands
 
@@ -20,6 +20,5 @@ The script reads configuration from AstrBot plugin config when available. You ca
 
 - `KIMI_API_KEY`
 - `KIMI_CODE_API_KEY`
-- `KIMI_BASE_URL`
-- `KIMI_CHAT_BASE_URL`
-- `KIMI_MODEL`
+- `KIMI_SEARCH_URL`
+- `KIMI_FETCH_URL`

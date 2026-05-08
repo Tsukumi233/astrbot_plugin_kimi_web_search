@@ -2,25 +2,19 @@
   "connection_settings": {
     "type": "object",
     "description": "连接设置",
-    "hint": "Kimi OpenAI-compatible Chat Completions 连接参数",
+    "hint": "Kimi coding search/fetch 直连工具参数",
     "items": {
       "api_key": {
         "type": "string",
-        "description": "Kimi API Key",
-        "hint": "标准 Kimi API 使用 Moonshot API Key；Kimi coding plan 使用对应 API Key。",
+        "description": "Kimi coding plan API Key",
+        "hint": "用于 /coding/v1/search 和 /coding/v1/fetch",
         "default": ""
       },
-      "base_url": {
+      "search_url": {
         "type": "string",
-        "description": "Base URL",
-        "hint": "标准 Kimi API: https://api.moonshot.cn/v1；coding plan 可改为 https://api.kimi.com/coding/v1",
-        "default": "https://api.moonshot.cn/v1"
-      },
-      "model": {
-        "type": "string",
-        "description": "模型 ID",
-        "hint": "标准 Kimi API 可用 kimi-k2.6；coding plan 可用 kimi-for-coding",
-        "default": "kimi-k2.6"
+        "description": "Search API URL",
+        "hint": "kimi_web_search 使用的直连搜索接口",
+        "default": "https://api.kimi.com/coding/v1/search"
       },
       "fetch_url": {
         "type": "string",
@@ -52,62 +46,42 @@
       },
       "user_agent": {
         "type": "string",
-        "description": "自定义 User-Agent",
-        "hint": "标准 Kimi API 通常留空；coding plan/fetch 建议填 KimiCLI/1.30.0",
-        "default": ""
+        "description": "User-Agent",
+        "hint": "coding plan 默认使用 KimiCLI/1.30.0",
+        "default": "KimiCLI/1.30.0"
       }
     }
   },
   "request_settings": {
     "type": "object",
     "description": "请求设置",
-    "hint": "控制 Chat Completions 请求",
+    "hint": "控制搜索和输出",
     "items": {
+      "default_limit": {
+        "type": "int",
+        "description": "默认搜索结果数量",
+        "hint": "范围 1-20",
+        "default": 8,
+        "slider": {
+          "min": 1,
+          "max": 20,
+          "step": 1
+        }
+      },
+      "include_content": {
+        "type": "bool",
+        "description": "搜索时抓取页面正文",
+        "hint": "会返回更多内容，也会消耗更多上下文",
+        "default": false
+      },
       "max_content_chars": {
         "type": "int",
-        "description": "网页获取工具最大返回字符数",
+        "description": "正文最大返回字符数",
         "default": 4000,
         "slider": {
           "min": 500,
           "max": 12000,
           "step": 500
-        }
-      },
-      "max_tokens": {
-        "type": "int",
-        "description": "最大输出 Token",
-        "default": 8192,
-        "slider": {
-          "min": 1024,
-          "max": 32768,
-          "step": 1024
-        }
-      },
-      "temperature": {
-        "type": "float",
-        "description": "温度",
-        "default": 0.6,
-        "slider": {
-          "min": 0,
-          "max": 1,
-          "step": 0.1
-        }
-      },
-      "disable_thinking": {
-        "type": "bool",
-        "description": "禁用思考能力",
-        "hint": "Kimi 官方文档要求使用 $web_search 时禁用思考能力",
-        "default": true
-      },
-      "max_tool_rounds": {
-        "type": "int",
-        "description": "最大工具调用轮数",
-        "hint": "防止异常循环",
-        "default": 6,
-        "slider": {
-          "min": 1,
-          "max": 12,
-          "step": 1
         }
       }
     }

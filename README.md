@@ -1,6 +1,6 @@
 # Kimi 联网搜索 (astrbot_plugin_kimi_web_search)
 
-使用 Kimi OpenAI-compatible Chat Completions 为 AstrBot 提供互联网搜索能力，并使用 coding plan 的 `/coding/v1/fetch` 作为网页读取工具。
+使用 Kimi coding plan 的 `/coding/v1/search` 和 `/coding/v1/fetch` 为 AstrBot 提供互联网搜索和网页读取能力。
 
 ## 功能
 
@@ -31,11 +31,12 @@ git clone https://github.com/Tsukumi233/astrbot_plugin_kimi_web_search
 
 | 配置项 | 默认值 | 说明 |
 | --- | --- | --- |
-| `api_key` | 空 | Kimi API Key |
-| `base_url` | `https://api.moonshot.cn/v1` | OpenAI-compatible base URL；coding plan 可填 `https://api.kimi.com/coding/v1` |
-| `model` | `kimi-k2.6` | 标准 Kimi 可用 `kimi-k2.6`；coding plan 可用 `kimi-for-coding` |
+| `api_key` | 空 | Kimi coding plan API Key |
+| `search_url` | `https://api.kimi.com/coding/v1/search` | `kimi_web_search` 使用的直连搜索接口 |
 | `fetch_url` | `https://api.kimi.com/coding/v1/fetch` | `kimi_web_fetch` 使用的直连网页抓取接口 |
-| `user_agent` | 空 | 标准 Kimi API 通常留空；coding plan/fetch 建议填 `KimiCLI/1.30.0` |
+| `user_agent` | `KimiCLI/1.30.0` | coding plan 请求头 |
+| `default_limit` | `8` | 默认搜索结果数量，范围 1-20 |
+| `include_content` | `false` | 搜索时是否抓取页面正文 |
 | `enable_fetch` | `true` | 是否启用网页抓取工具 |
 | `enable_skill` | `false` | 是否安装 Skill，并移除 LLM Tool |
 
@@ -49,23 +50,19 @@ git clone https://github.com/Tsukumi233/astrbot_plugin_kimi_web_search
 
 LLM Tool 会在 AstrBot 调用工具时自动使用：
 
-- `kimi_web_search(query)`
+- `kimi_web_search(query, limit, include_content)`
 - `kimi_web_fetch(url)`
 
-## 与 Kimi 官方文档的对应关系
+## 实现路径
 
-插件按官方文档实现：
-
-- 请求 `chat.completions`
-- 在 `tools` 中声明 `{"type":"builtin_function","function":{"name":"$web_search"}}`
-- 工具调用返回后，将 `$web_search` 的 `arguments` 原样作为 `role=tool` 消息提交回模型
-- 默认传入 `thinking: {"type": "disabled"}`，符合官方文档“使用 `$web_search` 时必须禁用思考能力”的说明
-- `kimi_web_fetch` 不走 `$web_search`，而是直连 `/coding/v1/fetch` 返回网页 Markdown。
+- `kimi_web_search` 直连 `/coding/v1/search`，返回结构化搜索结果。
+- `kimi_web_fetch` 直连 `/coding/v1/fetch`，返回网页 Markdown。
+- 插件不再使用 Chat Completions 的 `$web_search`。
 
 ## 注意
 
 - API Key 请只放在 AstrBot 插件配置中，不要提交到仓库。
-- 标准 Kimi API 和 coding plan 的 base URL、model id、权限可能不同，请按实际账号能力配置。
+- 这些接口依赖 Kimi coding plan 权限；标准 Moonshot/Kimi API Key 不一定可用。
 - 插件使用 `aiohttp`，没有使用同步 `requests`。
 
 ## 许可
