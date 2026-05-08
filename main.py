@@ -13,16 +13,7 @@ from astrbot.api.event import AstrMessageEvent, filter
 from astrbot.api.star import Context, Star
 from astrbot.core.star.filter.command import GreedyStr
 
-from .api.kimi_code import (
-    DEFAULT_CHAT_BASE_URL,
-    DEFAULT_CHAT_MODEL,
-    DEFAULT_FETCH_URL,
-    DEFAULT_SEARCH_URL,
-    KimiCodeClient,
-    KimiCodeError,
-    format_search_results,
-    normalize_limit,
-)
+from .api.kimi_web import DEFAULT_BASE_URL, DEFAULT_MODEL, KimiWebClient, KimiWebError
 
 try:
     from astrbot.core.provider.register import llm_tools as _llm_tools_registry
@@ -34,18 +25,13 @@ PLUGIN_NAME = "astrbot_plugin_kimi_web_search"
 SKILL_NAME = "kimi-web-search"
 
 CONFIG_PATHS = {
-    "api_mode": ("connection_settings", "api_mode"),
     "api_key": ("connection_settings", "api_key"),
-    "chat_base_url": ("connection_settings", "chat_base_url"),
+    "base_url": ("connection_settings", "base_url"),
     "model": ("connection_settings", "model"),
-    "search_url": ("connection_settings", "search_url"),
-    "fetch_url": ("connection_settings", "fetch_url"),
     "timeout_seconds": ("connection_settings", "timeout_seconds"),
     "reuse_session": ("connection_settings", "reuse_session"),
     "proxy": ("connection_settings", "proxy"),
     "user_agent": ("connection_settings", "user_agent"),
-    "default_limit": ("request_settings", "default_limit"),
-    "include_content": ("request_settings", "include_content"),
     "max_content_chars": ("request_settings", "max_content_chars"),
     "max_tokens": ("request_settings", "max_tokens"),
     "temperature": ("request_settings", "temperature"),
@@ -56,18 +42,13 @@ CONFIG_PATHS = {
 }
 
 CONFIG_DEFAULTS = {
-    "api_mode": "builtin_web_search",
     "api_key": "",
-    "chat_base_url": DEFAULT_CHAT_BASE_URL,
-    "model": DEFAULT_CHAT_MODEL,
-    "search_url": DEFAULT_SEARCH_URL,
-    "fetch_url": DEFAULT_FETCH_URL,
-    "timeout_seconds": 30,
+    "base_url": DEFAULT_BASE_URL,
+    "model": DEFAULT_MODEL,
+    "timeout_seconds": 60,
     "reuse_session": False,
     "proxy": "",
     "user_agent": "",
-    "default_limit": 8,
-    "include_content": False,
     "max_content_chars": 4000,
     "max_tokens": 8192,
     "temperature": 0.6,
@@ -78,7 +59,7 @@ CONFIG_DEFAULTS = {
 }
 
 
-class KimiCodeSearchPlugin(Star):
+class KimiWebSearchPlugin(Star):
     def __init__(self, context: Context, config: dict | None = None):
         super().__init__(context)
         self.config = config or {}
@@ -104,14 +85,12 @@ class KimiCodeSearchPlugin(Star):
         if not self._cfg("api_key", ""):
             logger.warning(f"[{PLUGIN_NAME}] Kimi API Key 未配置")
 
-    def _client(self) -> KimiCodeClient:
-        return KimiCodeClient(
+    def _client(self) -> KimiWebClient:
+        return KimiWebClient(
             api_key=str(self._cfg("api_key", "") or ""),
-            chat_base_url=str(self._cfg("chat_base_url", DEFAULT_CHAT_BASE_URL) or DEFAULT_CHAT_BASE_URL),
-            model=str(self._cfg("model", DEFAULT_CHAT_MODEL) or DEFAULT_CHAT_MODEL),
-            search_url=str(self._cfg("search_url", DEFAULT_SEARCH_URL) or DEFAULT_SEARCH_URL),
-            fetch_url=str(self._cfg("fetch_url", DEFAULT_FETCH_URL) or DEFAULT_FETCH_URL),
-            timeout_seconds=int(self._cfg("timeout_seconds", 30) or 30),
+            base_url=str(self._cfg("base_url", DEFAULT_BASE_URL) or DEFAULT_BASE_URL),
+            model=str(self._cfg("model", DEFAULT_MODEL) or DEFAULT_MODEL),
+            timeout_seconds=int(self._cfg("timeout_seconds", 60) or 60),
             proxy=str(self._cfg("proxy", "") or "") or None,
             session=self._session,
             user_agent=str(self._cfg("user_agent", "") or ""),
@@ -120,12 +99,6 @@ class KimiCodeSearchPlugin(Star):
             disable_thinking=bool(self._cfg("disable_thinking", True)),
             max_rounds=int(self._cfg("max_tool_rounds", 6) or 6),
         )
-
-    def _api_mode(self) -> str:
-        mode = str(self._cfg("api_mode", "builtin_web_search") or "builtin_web_search")
-        if mode not in {"builtin_web_search", "coding_endpoints"}:
-            return "builtin_web_search"
-        return mode
 
     def _unregister_disabled_tools(self) -> None:
         if _llm_tools_registry is None:
@@ -142,41 +115,15 @@ class KimiCodeSearchPlugin(Star):
     async def _do_search(
         self,
         query: str,
-        *,
-        limit: int | None = None,
-        include_content: bool | None = None,
     ) -> str:
-        if self._api_mode() == "builtin_web_search":
-            return await self._client().builtin_web_search(query=query)
-
-        default_limit = int(self._cfg("default_limit", 8) or 8)
-        final_limit = normalize_limit(limit, default_limit)
-        final_include_content = (
-            bool(self._cfg("include_content", False))
-            if include_content is None
-            else bool(include_content)
-        )
-        results = await self._client().search(
-            query=query,
-            limit=final_limit,
-            include_content=final_include_content,
-        )
-        max_content_chars = int(self._cfg("max_content_chars", 4000) or 4000)
-        return format_search_results(
-            results,
-            include_content=final_include_content,
-            max_content_chars=max(500, min(12000, max_content_chars)),
-        )
+        return await self._client().web_search(query=query)
 
     async def _do_fetch(self, url: str) -> str:
         if not self._cfg("enable_fetch", True):
             return "Kimi 网页获取未启用。"
-        if self._api_mode() == "builtin_web_search":
-            content = await self._client().builtin_web_search(
-                query=f"请联网读取这个网页并整理正文要点，保留关键来源：{url}"
-            )
-        else:
-            content = await self._client().fetch(url=url)
+        content = await self._client().web_search(
+            query=f"请联网读取这个网页并整理正文要点，保留关键来源：{url}"
+        )
         max_chars = max(1000, min(20000, int(self._cfg("max_content_chars", 4000) or 4000) * 3))
         return content[:max_chars]
 
@@ -193,7 +140,7 @@ class KimiCodeSearchPlugin(Star):
         try:
             text = await self._do_search(query)
             yield event.plain_result(f"Kimi 搜索「{query}」结果：\n\n{text}")
-        except KimiCodeError as exc:
+        except KimiWebError as exc:
             logger.warning(f"[{PLUGIN_NAME}] /kimi 搜索失败: {exc}")
             yield event.plain_result(f"Kimi 搜索失败：{exc}")
         except Exception as exc:
@@ -210,7 +157,7 @@ class KimiCodeSearchPlugin(Star):
         try:
             text = await self._do_fetch(url)
             yield event.plain_result(f"Kimi 获取网页内容：\nURL: {url}\n\n{text}")
-        except KimiCodeError as exc:
+        except KimiWebError as exc:
             logger.warning(f"[{PLUGIN_NAME}] /kimifetch 失败: {exc}")
             yield event.plain_result(f"Kimi 获取网页失败：{exc}")
         except Exception as exc:
@@ -222,26 +169,17 @@ class KimiCodeSearchPlugin(Star):
         self,
         event: AstrMessageEvent,
         query: str,
-        limit: int = 0,
-        include_content: bool = False,
     ) -> str:
         """使用 Kimi 联网搜索服务搜索互联网，适合查询最新新闻、文档、公告、博客、论文和网页信息。
 
         Args:
             query(string): 搜索关键词或问题，应当清晰、具体、自包含
-            limit(number): 返回结果数量，1-20；传 0 使用插件默认值
-            include_content(boolean): 是否同时抓取页面正文，会消耗更多上下文
         """
         del event
         if not query:
             return "错误：query 不能为空。"
         try:
-            limit_value = None if int(limit or 0) <= 0 else int(limit)
-            text = await self._do_search(
-                query,
-                limit=limit_value,
-                include_content=include_content,
-            )
+            text = await self._do_search(query)
             return f"Kimi 搜索「{query}」结果：\n\n{text}"
         except Exception as exc:
             logger.warning(f"[{PLUGIN_NAME}] kimi_web_search tool failed: {exc}")

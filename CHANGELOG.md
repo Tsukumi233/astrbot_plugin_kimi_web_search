@@ -1,5 +1,11 @@
 # Changelog
 
+## v0.3.0
+
+- Remove direct `/coding/v1/search` and `/coding/v1/fetch` endpoint mode.
+- Use one OpenAI-compatible Chat Completions path for both standard Kimi API and coding plan.
+- Keep configurable `base_url`, `model`, and `user_agent`.
+
 ## v0.2.0
 
 - Rename user-facing feature to Kimi web search.

@@ -2,55 +2,33 @@
   "connection_settings": {
     "type": "object",
     "description": "连接设置",
-    "hint": "Kimi API 联网搜索连接参数",
+    "hint": "Kimi OpenAI-compatible Chat Completions 连接参数",
     "items": {
-      "api_mode": {
-        "type": "string",
-        "description": "API 模式",
-        "hint": "builtin_web_search 使用 Kimi 官方 Chat Completions $web_search；coding_endpoints 使用 Kimi CLI/coding endpoint，需配置兼容 UA",
-        "default": "builtin_web_search",
-        "options": [
-          "builtin_web_search",
-          "coding_endpoints"
-        ]
-      },
       "api_key": {
         "type": "string",
         "description": "Kimi API Key",
-        "hint": "标准 Kimi API 使用 Moonshot API Key；coding_endpoints 模式使用对应可访问接口的密钥。",
+        "hint": "标准 Kimi API 使用 Moonshot API Key；Kimi coding plan 使用对应 API Key。",
         "default": ""
       },
-      "chat_base_url": {
+      "base_url": {
         "type": "string",
-        "description": "Chat Completions Base URL",
-        "hint": "标准 Kimi API 默认地址；如果使用兼容服务可改为对应 base URL",
+        "description": "Base URL",
+        "hint": "标准 Kimi API: https://api.moonshot.cn/v1；coding plan 可改为 https://api.kimi.com/coding/v1",
         "default": "https://api.moonshot.cn/v1"
       },
       "model": {
         "type": "string",
         "description": "模型 ID",
-        "hint": "标准联网搜索建议使用支持 $web_search 的 Kimi 模型，例如 kimi-k2.6",
+        "hint": "标准 Kimi API 可用 kimi-k2.6；coding plan 可用 kimi-for-coding",
         "default": "kimi-k2.6"
-      },
-      "search_url": {
-        "type": "string",
-        "description": "Coding Search API 地址",
-        "hint": "仅 coding_endpoints 模式使用",
-        "default": "https://api.kimi.com/coding/v1/search"
-      },
-      "fetch_url": {
-        "type": "string",
-        "description": "Coding Fetch API 地址",
-        "hint": "仅 coding_endpoints 模式使用",
-        "default": "https://api.kimi.com/coding/v1/fetch"
       },
       "timeout_seconds": {
         "type": "int",
         "description": "请求超时时间（秒）",
-        "default": 30,
+        "default": 60,
         "slider": {
           "min": 5,
-          "max": 120,
+          "max": 180,
           "step": 1
         }
       },
@@ -69,7 +47,7 @@
       "user_agent": {
         "type": "string",
         "description": "自定义 User-Agent",
-        "hint": "标准 Kimi API 通常留空；coding_endpoints 模式可填 KimiCLI/1.30.0",
+        "hint": "标准 Kimi API 通常留空；coding plan 可填 KimiCLI/1.30.0",
         "default": ""
       }
     }
@@ -77,28 +55,11 @@
   "request_settings": {
     "type": "object",
     "description": "请求设置",
-    "hint": "控制搜索数量和正文抓取",
+    "hint": "控制 Chat Completions 请求",
     "items": {
-      "default_limit": {
-        "type": "int",
-        "description": "默认搜索结果数量",
-        "hint": "仅 coding_endpoints 模式使用，范围 1-20",
-        "default": 8,
-        "slider": {
-          "min": 1,
-          "max": 20,
-          "step": 1
-        }
-      },
-      "include_content": {
-        "type": "bool",
-        "description": "搜索时抓取页面正文",
-        "hint": "仅 coding_endpoints 模式使用；标准模式由 $web_search 自动处理",
-        "default": false
-      },
       "max_content_chars": {
         "type": "int",
-        "description": "单次返回正文最大字符数",
+        "description": "网页获取工具最大返回字符数",
         "default": 4000,
         "slider": {
           "min": 500,
@@ -109,7 +70,6 @@
       "max_tokens": {
         "type": "int",
         "description": "最大输出 Token",
-        "hint": "标准 $web_search 模式使用",
         "default": 8192,
         "slider": {
           "min": 1024,
@@ -136,7 +96,7 @@
       "max_tool_rounds": {
         "type": "int",
         "description": "最大工具调用轮数",
-        "hint": "标准 $web_search 模式使用，防止异常循环",
+        "hint": "防止异常循环",
         "default": 6,
         "slider": {
           "min": 1,
@@ -153,8 +113,8 @@
     "items": {
       "enable_fetch": {
         "type": "bool",
-        "description": "启用网页抓取工具",
-        "hint": "启用后 AI 可调用 kimi_web_fetch 读取网页正文",
+        "description": "启用网页获取工具",
+        "hint": "启用后 AI 可调用 kimi_web_fetch 读取网页",
         "default": true
       },
       "enable_skill": {

@@ -1,7 +1,7 @@
 name: astrbot_plugin_kimi_web_search
 display_name: Kimi 联网搜索
-desc: 使用 Kimi API 官方 $web_search 或兼容 coding endpoint 进行互联网搜索和网页正文获取，支持指令、LLM Tool 和 Skill。
-version: v0.2.0
+desc: 使用 Kimi OpenAI-compatible Chat Completions 与官方 $web_search 进行互联网搜索和网页读取，支持指令、LLM Tool 和 Skill。
+version: v0.3.0
 author: Tsukumi233
 repo: https://github.com/Tsukumi233/astrbot_plugin_kimi_web_search
 astrbot_version: ">=4.9.2"

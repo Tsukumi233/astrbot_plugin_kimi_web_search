@@ -1,6 +1,6 @@
 # Kimi 联网搜索 (astrbot_plugin_kimi_web_search)
 
-使用 Kimi API 为 AstrBot 提供互联网搜索和网页正文获取能力。默认模式遵循 Kimi 官方文档，通过 Chat Completions 的 `builtin_function.$web_search` 实现联网搜索；也保留兼容模式，可配置为使用 Kimi CLI/coding endpoint。
+使用 Kimi OpenAI-compatible Chat Completions 为 AstrBot 提供互联网搜索和网页读取能力。标准 Kimi API 与 Kimi coding plan 都走同一套调用方式：配置不同的 `base_url`、`model`，必要时配置 `User-Agent`。
 
 ## 功能
 
@@ -31,15 +31,10 @@ git clone https://github.com/Tsukumi233/astrbot_plugin_kimi_web_search
 
 | 配置项 | 默认值 | 说明 |
 | --- | --- | --- |
-| `api_mode` | `builtin_web_search` | `builtin_web_search` 使用官方 `$web_search`；`coding_endpoints` 使用 Kimi CLI/coding endpoint |
 | `api_key` | 空 | Kimi API Key |
-| `chat_base_url` | `https://api.moonshot.cn/v1` | 标准 Chat Completions base URL |
-| `model` | `kimi-k2.6` | 支持 `$web_search` 的 Kimi 模型 |
-| `search_url` | `https://api.kimi.com/coding/v1/search` | 仅 `coding_endpoints` 模式使用 |
-| `fetch_url` | `https://api.kimi.com/coding/v1/fetch` | 仅 `coding_endpoints` 模式使用 |
-| `user_agent` | 空 | 标准模式留空；coding endpoint 可填 `KimiCLI/1.30.0` |
-| `default_limit` | `8` | coding endpoint 默认搜索结果数量，范围 1-20 |
-| `include_content` | `false` | coding endpoint 搜索时是否抓取页面正文 |
+| `base_url` | `https://api.moonshot.cn/v1` | OpenAI-compatible base URL；coding plan 可填 `https://api.kimi.com/coding/v1` |
+| `model` | `kimi-k2.6` | 标准 Kimi 可用 `kimi-k2.6`；coding plan 可用 `kimi-for-coding` |
+| `user_agent` | 空 | 标准 Kimi API 通常留空；coding plan 可填 `KimiCLI/1.30.0` |
 | `enable_fetch` | `true` | 是否启用网页抓取工具 |
 | `enable_skill` | `false` | 是否安装 Skill，并移除 LLM Tool |
 
@@ -53,24 +48,22 @@ git clone https://github.com/Tsukumi233/astrbot_plugin_kimi_web_search
 
 LLM Tool 会在 AstrBot 调用工具时自动使用：
 
-- `kimi_web_search(query, limit, include_content)`
+- `kimi_web_search(query)`
 - `kimi_web_fetch(url)`
 
 ## 与 Kimi 官方文档的对应关系
 
-默认 `builtin_web_search` 模式按官方文档实现：
+插件按官方文档实现：
 
 - 请求 `chat.completions`
 - 在 `tools` 中声明 `{"type":"builtin_function","function":{"name":"$web_search"}}`
 - 工具调用返回后，将 `$web_search` 的 `arguments` 原样作为 `role=tool` 消息提交回模型
 - 默认传入 `thinking: {"type": "disabled"}`，符合官方文档“使用 `$web_search` 时必须禁用思考能力”的说明
 
-`coding_endpoints` 模式不是官方 `$web_search` 流程，而是兼容 Kimi CLI/coding endpoint 的实现，适合已有对应权限和 UA 需求的场景。
-
 ## 注意
 
 - API Key 请只放在 AstrBot 插件配置中，不要提交到仓库。
-- 标准 Kimi API 和 coding endpoint 的 base URL、model id、权限可能不同，请按实际账号能力配置。
+- 标准 Kimi API 和 coding plan 的 base URL、model id、权限可能不同，请按实际账号能力配置。
 - 插件使用 `aiohttp`，没有使用同步 `requests`。
 
 ## 许可
