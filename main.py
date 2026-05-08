@@ -13,7 +13,7 @@ from astrbot.api.event import AstrMessageEvent, filter
 from astrbot.api.star import Context, Star
 from astrbot.core.star.filter.command import GreedyStr
 
-from .api.kimi_web import DEFAULT_BASE_URL, DEFAULT_MODEL, KimiWebClient, KimiWebError
+from .api.kimi_web import DEFAULT_BASE_URL, DEFAULT_FETCH_URL, DEFAULT_MODEL, KimiWebClient, KimiWebError
 
 try:
     from astrbot.core.provider.register import llm_tools as _llm_tools_registry
@@ -28,6 +28,7 @@ CONFIG_PATHS = {
     "api_key": ("connection_settings", "api_key"),
     "base_url": ("connection_settings", "base_url"),
     "model": ("connection_settings", "model"),
+    "fetch_url": ("connection_settings", "fetch_url"),
     "timeout_seconds": ("connection_settings", "timeout_seconds"),
     "reuse_session": ("connection_settings", "reuse_session"),
     "proxy": ("connection_settings", "proxy"),
@@ -45,6 +46,7 @@ CONFIG_DEFAULTS = {
     "api_key": "",
     "base_url": DEFAULT_BASE_URL,
     "model": DEFAULT_MODEL,
+    "fetch_url": DEFAULT_FETCH_URL,
     "timeout_seconds": 60,
     "reuse_session": False,
     "proxy": "",
@@ -90,6 +92,7 @@ class KimiWebSearchPlugin(Star):
             api_key=str(self._cfg("api_key", "") or ""),
             base_url=str(self._cfg("base_url", DEFAULT_BASE_URL) or DEFAULT_BASE_URL),
             model=str(self._cfg("model", DEFAULT_MODEL) or DEFAULT_MODEL),
+            fetch_url=str(self._cfg("fetch_url", DEFAULT_FETCH_URL) or DEFAULT_FETCH_URL),
             timeout_seconds=int(self._cfg("timeout_seconds", 60) or 60),
             proxy=str(self._cfg("proxy", "") or "") or None,
             session=self._session,
@@ -121,9 +124,7 @@ class KimiWebSearchPlugin(Star):
     async def _do_fetch(self, url: str) -> str:
         if not self._cfg("enable_fetch", True):
             return "Kimi 网页获取未启用。"
-        content = await self._client().web_search(
-            query=f"请联网读取这个网页并整理正文要点，保留关键来源：{url}"
-        )
+        content = await self._client().fetch_url_content(url=url)
         max_chars = max(1000, min(20000, int(self._cfg("max_content_chars", 4000) or 4000) * 3))
         return content[:max_chars]
 

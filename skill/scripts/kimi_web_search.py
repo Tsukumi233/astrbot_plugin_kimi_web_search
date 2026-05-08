@@ -13,6 +13,8 @@ from typing import Any
 
 DEFAULT_BASE_URL = "https://api.moonshot.cn/v1"
 DEFAULT_MODEL = "kimi-k2.6"
+DEFAULT_FETCH_URL = "https://api.kimi.com/coding/v1/fetch"
+KIMI_CODE_USER_AGENT = "KimiCLI/1.30.0"
 PLUGIN_NAME = "astrbot_plugin_kimi_web_search"
 
 
@@ -62,6 +64,12 @@ def _headers(api_key: str, user_agent: str = "") -> dict[str, str]:
     }
     if user_agent:
         headers["User-Agent"] = user_agent
+    return headers
+
+
+def _fetch_headers(api_key: str, user_agent: str = KIMI_CODE_USER_AGENT) -> dict[str, str]:
+    headers = _headers(api_key, user_agent)
+    headers["Accept"] = "text/markdown"
     return headers
 
 
@@ -181,13 +189,26 @@ def main() -> int:
     model = os.environ.get("KIMI_MODEL") or _cfg(
         config, "connection_settings", "model", DEFAULT_MODEL
     )
+    fetch_url = os.environ.get("KIMI_FETCH_URL") or _cfg(
+        config, "connection_settings", "fetch_url", DEFAULT_FETCH_URL
+    )
     user_agent = str(_cfg(config, "connection_settings", "user_agent", "") or "")
 
-    query = args.query if args.command == "search" else f"请联网读取这个网页并整理正文要点，保留关键来源：{args.url}"
+    if args.command == "fetch":
+        print(
+            _post(
+                fetch_url,
+                {"url": args.url},
+                _fetch_headers(api_key, user_agent or KIMI_CODE_USER_AGENT),
+                timeout,
+            )
+        )
+        return 0
+
     print(
         _web_search(
             api_key=api_key,
-            query=query,
+            query=args.query,
             base_url=base_url,
             model=model,
             timeout=timeout,

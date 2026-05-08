@@ -10,6 +10,7 @@ import aiohttp
 
 DEFAULT_BASE_URL = "https://api.moonshot.cn/v1"
 DEFAULT_MODEL = "kimi-k2.6"
+DEFAULT_FETCH_URL = "https://api.kimi.com/coding/v1/fetch"
 KIMI_CODE_USER_AGENT = "KimiCLI/1.30.0"
 
 
@@ -27,6 +28,12 @@ def build_headers(api_key: str, *, user_agent: str = "") -> dict[str, str]:
     return headers
 
 
+def build_fetch_headers(api_key: str, *, user_agent: str = KIMI_CODE_USER_AGENT) -> dict[str, str]:
+    headers = build_headers(api_key, user_agent=user_agent)
+    headers["Accept"] = "text/markdown"
+    return headers
+
+
 class KimiWebClient:
     def __init__(
         self,
@@ -34,6 +41,7 @@ class KimiWebClient:
         api_key: str,
         base_url: str = DEFAULT_BASE_URL,
         model: str = DEFAULT_MODEL,
+        fetch_url: str = DEFAULT_FETCH_URL,
         timeout_seconds: int = 60,
         proxy: str | None = None,
         session: aiohttp.ClientSession | None = None,
@@ -46,6 +54,7 @@ class KimiWebClient:
         self.api_key = api_key.strip()
         self.base_url = base_url.strip().rstrip("/") or DEFAULT_BASE_URL
         self.model = model.strip() or DEFAULT_MODEL
+        self.fetch_url = fetch_url.strip() or DEFAULT_FETCH_URL
         self.timeout_seconds = max(1, int(timeout_seconds or 60))
         self.proxy = proxy.strip() if proxy else None
         self.session = session
@@ -122,23 +131,38 @@ class KimiWebClient:
 
         raise KimiWebError("Kimi web search 超过最大工具调用轮数")
 
+    async def fetch_url_content(self, *, url: str) -> str:
+        """Fetch a URL through the Kimi coding fetch endpoint."""
+        if not self.api_key:
+            raise KimiWebError("Kimi API Key 未配置")
+        return await self._post_text(
+            self.fetch_url,
+            {"url": url},
+            headers=build_fetch_headers(
+                self.api_key,
+                user_agent=self.user_agent or KIMI_CODE_USER_AGENT,
+            ),
+        )
+
     def _chat_completions_url(self) -> str:
         if self.base_url.endswith("/chat/completions"):
             return self.base_url
         return f"{self.base_url}/chat/completions"
 
     async def _post_json(self, url: str, body: dict[str, Any], headers: dict[str, str]) -> Any:
-        timeout = aiohttp.ClientTimeout(total=self.timeout_seconds)
-        session = self.session
-        if session is None:
-            async with aiohttp.ClientSession(timeout=timeout) as owned_session:
-                text = await self._request(owned_session, url, body, headers, timeout)
-        else:
-            text = await self._request(session, url, body, headers, timeout)
+        text = await self._post_text(url, body, headers=headers)
         try:
             return json.loads(text)
         except json.JSONDecodeError as exc:
             raise KimiWebError(f"Chat Completions JSON 解析失败: {exc}") from exc
+
+    async def _post_text(self, url: str, body: dict[str, Any], headers: dict[str, str]) -> str:
+        timeout = aiohttp.ClientTimeout(total=self.timeout_seconds)
+        session = self.session
+        if session is None:
+            async with aiohttp.ClientSession(timeout=timeout) as owned_session:
+                return await self._request(owned_session, url, body, headers, timeout)
+        return await self._request(session, url, body, headers, timeout)
 
     async def _request(
         self,

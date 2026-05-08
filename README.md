@@ -1,6 +1,6 @@
 # Kimi 联网搜索 (astrbot_plugin_kimi_web_search)
 
-使用 Kimi OpenAI-compatible Chat Completions 为 AstrBot 提供互联网搜索和网页读取能力。标准 Kimi API 与 Kimi coding plan 都走同一套调用方式：配置不同的 `base_url`、`model`，必要时配置 `User-Agent`。
+使用 Kimi OpenAI-compatible Chat Completions 为 AstrBot 提供互联网搜索能力，并使用 coding plan 的 `/coding/v1/fetch` 作为网页读取工具。
 
 ## 功能
 
@@ -34,7 +34,8 @@ git clone https://github.com/Tsukumi233/astrbot_plugin_kimi_web_search
 | `api_key` | 空 | Kimi API Key |
 | `base_url` | `https://api.moonshot.cn/v1` | OpenAI-compatible base URL；coding plan 可填 `https://api.kimi.com/coding/v1` |
 | `model` | `kimi-k2.6` | 标准 Kimi 可用 `kimi-k2.6`；coding plan 可用 `kimi-for-coding` |
-| `user_agent` | 空 | 标准 Kimi API 通常留空；coding plan 可填 `KimiCLI/1.30.0` |
+| `fetch_url` | `https://api.kimi.com/coding/v1/fetch` | `kimi_web_fetch` 使用的直连网页抓取接口 |
+| `user_agent` | 空 | 标准 Kimi API 通常留空；coding plan/fetch 建议填 `KimiCLI/1.30.0` |
 | `enable_fetch` | `true` | 是否启用网页抓取工具 |
 | `enable_skill` | `false` | 是否安装 Skill，并移除 LLM Tool |
 
@@ -59,6 +60,7 @@ LLM Tool 会在 AstrBot 调用工具时自动使用：
 - 在 `tools` 中声明 `{"type":"builtin_function","function":{"name":"$web_search"}}`
 - 工具调用返回后，将 `$web_search` 的 `arguments` 原样作为 `role=tool` 消息提交回模型
 - 默认传入 `thinking: {"type": "disabled"}`，符合官方文档“使用 `$web_search` 时必须禁用思考能力”的说明
+- `kimi_web_fetch` 不走 `$web_search`，而是直连 `/coding/v1/fetch` 返回网页 Markdown。
 
 ## 注意
 

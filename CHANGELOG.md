@@ -1,5 +1,10 @@
 # Changelog
 
+## v0.4.0
+
+- Change `kimi_web_fetch` to call `/coding/v1/fetch` directly.
+- Add configurable `fetch_url`.
+
 ## v0.3.0
 
 - Remove direct `/coding/v1/search` and `/coding/v1/fetch` endpoint mode.

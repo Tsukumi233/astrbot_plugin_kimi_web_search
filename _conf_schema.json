@@ -22,6 +22,12 @@
         "hint": "标准 Kimi API 可用 kimi-k2.6；coding plan 可用 kimi-for-coding",
         "default": "kimi-k2.6"
       },
+      "fetch_url": {
+        "type": "string",
+        "description": "Fetch API URL",
+        "hint": "kimi_web_fetch 使用的直连网页抓取接口",
+        "default": "https://api.kimi.com/coding/v1/fetch"
+      },
       "timeout_seconds": {
         "type": "int",
         "description": "请求超时时间（秒）",
@@ -47,7 +53,7 @@
       "user_agent": {
         "type": "string",
         "description": "自定义 User-Agent",
-        "hint": "标准 Kimi API 通常留空；coding plan 可填 KimiCLI/1.30.0",
+        "hint": "标准 Kimi API 通常留空；coding plan/fetch 建议填 KimiCLI/1.30.0",
         "default": ""
       }
     }
