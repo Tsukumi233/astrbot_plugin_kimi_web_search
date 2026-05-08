@@ -2,24 +2,46 @@
   "connection_settings": {
     "type": "object",
     "description": "连接设置",
-    "hint": "Kimi Code Search / Fetch 的连接参数",
+    "hint": "Kimi API 联网搜索连接参数",
     "items": {
+      "api_mode": {
+        "type": "string",
+        "description": "API 模式",
+        "hint": "builtin_web_search 使用 Kimi 官方 Chat Completions $web_search；coding_endpoints 使用 Kimi CLI/coding endpoint，需配置兼容 UA",
+        "default": "builtin_web_search",
+        "options": [
+          "builtin_web_search",
+          "coding_endpoints"
+        ]
+      },
       "api_key": {
         "type": "string",
-        "description": "Kimi Code API Key",
-        "hint": "Kimi Code Plan 的 API Key。插件不会内置或上传你的密钥。",
+        "description": "Kimi API Key",
+        "hint": "标准 Kimi API 使用 Moonshot API Key；coding_endpoints 模式使用对应可访问接口的密钥。",
         "default": ""
+      },
+      "chat_base_url": {
+        "type": "string",
+        "description": "Chat Completions Base URL",
+        "hint": "标准 Kimi API 默认地址；如果使用兼容服务可改为对应 base URL",
+        "default": "https://api.moonshot.cn/v1"
+      },
+      "model": {
+        "type": "string",
+        "description": "模型 ID",
+        "hint": "标准联网搜索建议使用支持 $web_search 的 Kimi 模型，例如 kimi-k2.6",
+        "default": "kimi-k2.6"
       },
       "search_url": {
         "type": "string",
-        "description": "Search API 地址",
-        "hint": "默认使用 Kimi Code Search endpoint",
+        "description": "Coding Search API 地址",
+        "hint": "仅 coding_endpoints 模式使用",
         "default": "https://api.kimi.com/coding/v1/search"
       },
       "fetch_url": {
         "type": "string",
-        "description": "Fetch API 地址",
-        "hint": "默认使用 Kimi Code Fetch endpoint",
+        "description": "Coding Fetch API 地址",
+        "hint": "仅 coding_endpoints 模式使用",
         "default": "https://api.kimi.com/coding/v1/fetch"
       },
       "timeout_seconds": {
@@ -43,6 +65,12 @@
         "description": "HTTP 代理",
         "hint": "例如 http://127.0.0.1:7890，留空则不使用代理",
         "default": ""
+      },
+      "user_agent": {
+        "type": "string",
+        "description": "自定义 User-Agent",
+        "hint": "标准 Kimi API 通常留空；coding_endpoints 模式可填 KimiCLI/1.30.0",
+        "default": ""
       }
     }
   },
@@ -54,7 +82,7 @@
       "default_limit": {
         "type": "int",
         "description": "默认搜索结果数量",
-        "hint": "范围 1-20",
+        "hint": "仅 coding_endpoints 模式使用，范围 1-20",
         "default": 8,
         "slider": {
           "min": 1,
@@ -65,7 +93,7 @@
       "include_content": {
         "type": "bool",
         "description": "搜索时抓取页面正文",
-        "hint": "会返回更多内容，也会消耗更多上下文",
+        "hint": "仅 coding_endpoints 模式使用；标准模式由 $web_search 自动处理",
         "default": false
       },
       "max_content_chars": {
@@ -76,6 +104,44 @@
           "min": 500,
           "max": 12000,
           "step": 500
+        }
+      },
+      "max_tokens": {
+        "type": "int",
+        "description": "最大输出 Token",
+        "hint": "标准 $web_search 模式使用",
+        "default": 8192,
+        "slider": {
+          "min": 1024,
+          "max": 32768,
+          "step": 1024
+        }
+      },
+      "temperature": {
+        "type": "float",
+        "description": "温度",
+        "default": 0.6,
+        "slider": {
+          "min": 0,
+          "max": 1,
+          "step": 0.1
+        }
+      },
+      "disable_thinking": {
+        "type": "bool",
+        "description": "禁用思考能力",
+        "hint": "Kimi 官方文档要求使用 $web_search 时禁用思考能力",
+        "default": true
+      },
+      "max_tool_rounds": {
+        "type": "int",
+        "description": "最大工具调用轮数",
+        "hint": "标准 $web_search 模式使用，防止异常循环",
+        "default": 6,
+        "slider": {
+          "min": 1,
+          "max": 12,
+          "step": 1
         }
       }
     }
@@ -88,7 +154,7 @@
       "enable_fetch": {
         "type": "bool",
         "description": "启用网页抓取工具",
-        "hint": "启用后 AI 可调用 kimi_code_fetch 读取网页正文",
+        "hint": "启用后 AI 可调用 kimi_web_fetch 读取网页正文",
         "default": true
       },
       "enable_skill": {
@@ -100,4 +166,3 @@
     }
   }
 }
-

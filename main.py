@@ -1,4 +1,4 @@
-"""AstrBot plugin for Kimi Code Search."""
+"""AstrBot plugin for Kimi web search."""
 
 from __future__ import annotations
 
@@ -14,6 +14,8 @@ from astrbot.api.star import Context, Star
 from astrbot.core.star.filter.command import GreedyStr
 
 from .api.kimi_code import (
+    DEFAULT_CHAT_BASE_URL,
+    DEFAULT_CHAT_MODEL,
     DEFAULT_FETCH_URL,
     DEFAULT_SEARCH_URL,
     KimiCodeClient,
@@ -28,33 +30,49 @@ except ImportError:
     _llm_tools_registry = None
 
 
-PLUGIN_NAME = "astrbot_plugin_kimi_code_search"
-SKILL_NAME = "kimi-code-search"
+PLUGIN_NAME = "astrbot_plugin_kimi_web_search"
+SKILL_NAME = "kimi-web-search"
 
 CONFIG_PATHS = {
+    "api_mode": ("connection_settings", "api_mode"),
     "api_key": ("connection_settings", "api_key"),
+    "chat_base_url": ("connection_settings", "chat_base_url"),
+    "model": ("connection_settings", "model"),
     "search_url": ("connection_settings", "search_url"),
     "fetch_url": ("connection_settings", "fetch_url"),
     "timeout_seconds": ("connection_settings", "timeout_seconds"),
     "reuse_session": ("connection_settings", "reuse_session"),
     "proxy": ("connection_settings", "proxy"),
+    "user_agent": ("connection_settings", "user_agent"),
     "default_limit": ("request_settings", "default_limit"),
     "include_content": ("request_settings", "include_content"),
     "max_content_chars": ("request_settings", "max_content_chars"),
+    "max_tokens": ("request_settings", "max_tokens"),
+    "temperature": ("request_settings", "temperature"),
+    "disable_thinking": ("request_settings", "disable_thinking"),
+    "max_tool_rounds": ("request_settings", "max_tool_rounds"),
     "enable_fetch": ("tool_settings", "enable_fetch"),
     "enable_skill": ("tool_settings", "enable_skill"),
 }
 
 CONFIG_DEFAULTS = {
+    "api_mode": "builtin_web_search",
     "api_key": "",
+    "chat_base_url": DEFAULT_CHAT_BASE_URL,
+    "model": DEFAULT_CHAT_MODEL,
     "search_url": DEFAULT_SEARCH_URL,
     "fetch_url": DEFAULT_FETCH_URL,
     "timeout_seconds": 30,
     "reuse_session": False,
     "proxy": "",
+    "user_agent": "",
     "default_limit": 8,
     "include_content": False,
     "max_content_chars": 4000,
+    "max_tokens": 8192,
+    "temperature": 0.6,
+    "disable_thinking": True,
+    "max_tool_rounds": 6,
     "enable_fetch": True,
     "enable_skill": False,
 }
@@ -84,29 +102,42 @@ class KimiCodeSearchPlugin(Star):
         else:
             self._uninstall_skill()
         if not self._cfg("api_key", ""):
-            logger.warning(f"[{PLUGIN_NAME}] Kimi Code API Key 未配置")
+            logger.warning(f"[{PLUGIN_NAME}] Kimi API Key 未配置")
 
     def _client(self) -> KimiCodeClient:
         return KimiCodeClient(
             api_key=str(self._cfg("api_key", "") or ""),
+            chat_base_url=str(self._cfg("chat_base_url", DEFAULT_CHAT_BASE_URL) or DEFAULT_CHAT_BASE_URL),
+            model=str(self._cfg("model", DEFAULT_CHAT_MODEL) or DEFAULT_CHAT_MODEL),
             search_url=str(self._cfg("search_url", DEFAULT_SEARCH_URL) or DEFAULT_SEARCH_URL),
             fetch_url=str(self._cfg("fetch_url", DEFAULT_FETCH_URL) or DEFAULT_FETCH_URL),
             timeout_seconds=int(self._cfg("timeout_seconds", 30) or 30),
             proxy=str(self._cfg("proxy", "") or "") or None,
             session=self._session,
+            user_agent=str(self._cfg("user_agent", "") or ""),
+            max_tokens=int(self._cfg("max_tokens", 8192) or 8192),
+            temperature=float(self._cfg("temperature", 0.6) or 0.6),
+            disable_thinking=bool(self._cfg("disable_thinking", True)),
+            max_rounds=int(self._cfg("max_tool_rounds", 6) or 6),
         )
+
+    def _api_mode(self) -> str:
+        mode = str(self._cfg("api_mode", "builtin_web_search") or "builtin_web_search")
+        if mode not in {"builtin_web_search", "coding_endpoints"}:
+            return "builtin_web_search"
+        return mode
 
     def _unregister_disabled_tools(self) -> None:
         if _llm_tools_registry is None:
             return
         if self._cfg("enable_skill", False):
-            _llm_tools_registry.remove_func("kimi_code_search")
-            _llm_tools_registry.remove_func("kimi_code_fetch")
+            _llm_tools_registry.remove_func("kimi_web_search")
+            _llm_tools_registry.remove_func("kimi_web_fetch")
             logger.info(f"[{PLUGIN_NAME}] Skill 已启用，已卸载 LLM Tool")
             return
         if not self._cfg("enable_fetch", True):
-            _llm_tools_registry.remove_func("kimi_code_fetch")
-            logger.info(f"[{PLUGIN_NAME}] Fetch 未启用，已卸载 kimi_code_fetch")
+            _llm_tools_registry.remove_func("kimi_web_fetch")
+            logger.info(f"[{PLUGIN_NAME}] Fetch 未启用，已卸载 kimi_web_fetch")
 
     async def _do_search(
         self,
@@ -115,6 +146,9 @@ class KimiCodeSearchPlugin(Star):
         limit: int | None = None,
         include_content: bool | None = None,
     ) -> str:
+        if self._api_mode() == "builtin_web_search":
+            return await self._client().builtin_web_search(query=query)
+
         default_limit = int(self._cfg("default_limit", 8) or 8)
         final_limit = normalize_limit(limit, default_limit)
         final_include_content = (
@@ -136,57 +170,62 @@ class KimiCodeSearchPlugin(Star):
 
     async def _do_fetch(self, url: str) -> str:
         if not self._cfg("enable_fetch", True):
-            return "Kimi Code Fetch 未启用。"
-        content = await self._client().fetch(url=url)
+            return "Kimi 网页获取未启用。"
+        if self._api_mode() == "builtin_web_search":
+            content = await self._client().builtin_web_search(
+                query=f"请联网读取这个网页并整理正文要点，保留关键来源：{url}"
+            )
+        else:
+            content = await self._client().fetch(url=url)
         max_chars = max(1000, min(20000, int(self._cfg("max_content_chars", 4000) or 4000) * 3))
         return content[:max_chars]
 
     @filter.command("kimi")
     async def kimi_command(self, event: AstrMessageEvent, query: GreedyStr = ""):
-        """使用 Kimi Code 搜索互联网。"""
+        """使用 Kimi 搜索互联网。"""
         query = str(query or "").strip()
         if not query or query.lower() == "help":
             yield event.plain_result(
                 "用法：/kimi Python 3.13 新特性\n"
-                "配置：在插件设置中填写 Kimi Code API Key。"
+                "配置：在插件设置中填写 Kimi API Key。"
             )
             return
         try:
             text = await self._do_search(query)
-            yield event.plain_result(f"Kimi Code 搜索「{query}」结果：\n\n{text}")
+            yield event.plain_result(f"Kimi 搜索「{query}」结果：\n\n{text}")
         except KimiCodeError as exc:
             logger.warning(f"[{PLUGIN_NAME}] /kimi 搜索失败: {exc}")
-            yield event.plain_result(f"Kimi Code 搜索失败：{exc}")
+            yield event.plain_result(f"Kimi 搜索失败：{exc}")
         except Exception as exc:
             logger.exception(f"[{PLUGIN_NAME}] /kimi 未预期错误: {exc}")
-            yield event.plain_result(f"Kimi Code 搜索失败：{exc}")
+            yield event.plain_result(f"Kimi 搜索失败：{exc}")
 
     @filter.command("kimifetch")
     async def kimifetch_command(self, event: AstrMessageEvent, url: GreedyStr = ""):
-        """使用 Kimi Code Fetch 获取网页正文。"""
+        """使用 Kimi 获取网页正文。"""
         url = str(url or "").strip()
         if not url.startswith(("http://", "https://")):
             yield event.plain_result("用法：/kimifetch https://example.com/article")
             return
         try:
             text = await self._do_fetch(url)
-            yield event.plain_result(f"Kimi Code 获取网页内容：\nURL: {url}\n\n{text}")
+            yield event.plain_result(f"Kimi 获取网页内容：\nURL: {url}\n\n{text}")
         except KimiCodeError as exc:
             logger.warning(f"[{PLUGIN_NAME}] /kimifetch 失败: {exc}")
-            yield event.plain_result(f"Kimi Code 获取网页失败：{exc}")
+            yield event.plain_result(f"Kimi 获取网页失败：{exc}")
         except Exception as exc:
             logger.exception(f"[{PLUGIN_NAME}] /kimifetch 未预期错误: {exc}")
-            yield event.plain_result(f"Kimi Code 获取网页失败：{exc}")
+            yield event.plain_result(f"Kimi 获取网页失败：{exc}")
 
-    @filter.llm_tool(name="kimi_code_search")
-    async def kimi_code_search_tool(
+    @filter.llm_tool(name="kimi_web_search")
+    async def kimi_web_search_tool(
         self,
         event: AstrMessageEvent,
         query: str,
         limit: int = 0,
         include_content: bool = False,
     ) -> str:
-        """使用 Kimi Code 搜索服务搜索互联网，适合查询最新新闻、文档、公告、博客、论文和网页信息。
+        """使用 Kimi 联网搜索服务搜索互联网，适合查询最新新闻、文档、公告、博客、论文和网页信息。
 
         Args:
             query(string): 搜索关键词或问题，应当清晰、具体、自包含
@@ -203,14 +242,14 @@ class KimiCodeSearchPlugin(Star):
                 limit=limit_value,
                 include_content=include_content,
             )
-            return f"Kimi Code 搜索「{query}」结果：\n\n{text}"
+            return f"Kimi 搜索「{query}」结果：\n\n{text}"
         except Exception as exc:
-            logger.warning(f"[{PLUGIN_NAME}] kimi_code_search tool failed: {exc}")
-            return f"Kimi Code 搜索「{query}」失败：{exc}"
+            logger.warning(f"[{PLUGIN_NAME}] kimi_web_search tool failed: {exc}")
+            return f"Kimi 搜索「{query}」失败：{exc}"
 
-    @filter.llm_tool(name="kimi_code_fetch")
-    async def kimi_code_fetch_tool(self, event: AstrMessageEvent, url: str) -> str:
-        """使用 Kimi Code Fetch 服务获取指定 URL 的网页正文。
+    @filter.llm_tool(name="kimi_web_fetch")
+    async def kimi_web_fetch_tool(self, event: AstrMessageEvent, url: str) -> str:
+        """使用 Kimi 获取指定 URL 的网页正文。
 
         Args:
             url(string): 要获取的网页完整 URL，必须是 HTTP/HTTPS 地址
@@ -220,10 +259,10 @@ class KimiCodeSearchPlugin(Star):
             return "错误：请提供完整的 HTTP/HTTPS URL。"
         try:
             text = await self._do_fetch(url)
-            return f"Kimi Code 获取网页内容：\nURL: {url}\n\n{text}"
+            return f"Kimi 获取网页内容：\nURL: {url}\n\n{text}"
         except Exception as exc:
-            logger.warning(f"[{PLUGIN_NAME}] kimi_code_fetch tool failed: {exc}")
-            return f"Kimi Code 获取网页「{url}」失败：{exc}"
+            logger.warning(f"[{PLUGIN_NAME}] kimi_web_fetch tool failed: {exc}")
+            return f"Kimi 获取网页「{url}」失败：{exc}"
 
     def _get_skill_manager(self):
         if hasattr(self, "_skill_mgr"):
